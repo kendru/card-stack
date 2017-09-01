@@ -16,8 +16,7 @@
      {:title "Card Stack"
       :complete-cards []
       :cards [{:title "Add your first card"
-               :description "Click the \"Add Card\" button below to get started"
-               :editing? false}]})))
+               :description "Click the \"Add Card\" button below to get started"}]})))
 
 ;; Helpers
 (defn indexed-seq [xs]
@@ -25,19 +24,25 @@
 
 (def empty-card
   {:title ""
-   :description ""
-   :editing? true})
+   :description ""})
 
 ;; Actions
 (defn push-card! [card]
-  (swap! app-state update-in [:cards] conj card))
+  (swap! app-state
+         #(-> %
+              (update-in [:cards] conj card)
+              (assoc :editing? true))))
 
 (defn pop-card! []
   (swap! app-state
          (fn [state]
            (-> state
                (update-in [:complete-cards] conj (-> state :cards last))
-               (update-in [:cards] #(into [] (butlast %)))))))
+               (update-in [:cards] #(into [] (butlast %)))
+               (assoc :editing? false)))))
+
+(defn toggle-edit-mode! []
+  (swap! app-state update-in [:editing?] not))
 
 (defn update-top-card-prop [prop]
   (fn [val]
@@ -70,7 +75,7 @@
 (defn footer []
   [:div.footer
    [content
-    [:button {:on-click save-state!} "Save"]]])
+    [:a.btn {:on-click save-state!} "Save"]]])
 
 (defn edit-title [title on-change]
   [:div.input-group
@@ -90,7 +95,7 @@
                :on-change #(on-change (.. % -target -value))}]])
 
 
-(defn render-card [{:keys [title description editing?]}]
+(defn render-card [{:keys [title description]} editing?]
   [:div.card
    [:div.header
     (if editing?
@@ -107,21 +112,23 @@
   [content
    [:div.cards
     (if-let [top-card (last (:cards @app-state))]
-      [render-card top-card]
+      [render-card top-card (:editing? @app-state)]
       [:p.info "No Cards Left!"])]])
 
-(defn add-card []
+(defn actions []
   (fn []
     [content
-     [:div.add-card
-      [:button {:on-click #(do (push-card! empty-card))}
-       "Add"]]]))
+     [:div.actions
+      [:a.btn.green {:on-click #(push-card! empty-card)}
+       "Add"]
+      [:a.btn.orange {:on-click #(toggle-edit-mode!)}
+       "Edit"]]]))
 
 (defn app []
   [:div.app
    [header]
    [cards]
-   [add-card]
+   [actions]
    [footer]])
 
 
